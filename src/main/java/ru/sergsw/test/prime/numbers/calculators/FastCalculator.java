@@ -4,8 +4,8 @@ import ru.sergsw.test.prime.numbers.calculators.splitterators.TaskSpliterator;
 
 import java.util.*;
 
-public class FastCalculator implements Calculator {
-    private static final int BATCH_SIZE = 10_000;
+public class FastCalculator implements Calculator, ConfigurableCalculator {
+    private int batchSize = 10_000;
 
     @Override
     public int calc(Task task, Context context) {
@@ -21,7 +21,7 @@ public class FastCalculator implements Calculator {
 
     @Override
     public int getBlockSize() {
-        return BATCH_SIZE;
+        return batchSize;
     }
 
     @Override
@@ -42,20 +42,25 @@ public class FastCalculator implements Calculator {
         return true;
     }
 
-    private static class FastCalcSpliterator implements TaskSpliterator {
+    @Override
+    public void setBlockSize(int blockSize) {
+        batchSize = blockSize;
+    }
+
+    private class FastCalcSpliterator implements TaskSpliterator {
         private final List<Set<Task>> schedule;
 
         public FastCalcSpliterator(Task mainTask) {
             List<Set<Task>> list;
-            if (mainTask.getTo() < BATCH_SIZE) {
+            if (mainTask.getTo() < batchSize) {
                 list = Collections.singletonList(Collections.singleton(mainTask));
             } else {
                 list = new ArrayList<>();
                 list.add(Collections.singleton(Task.builder()
                         .from(mainTask.getFrom())
-                        .to(BATCH_SIZE)
+                        .to(batchSize)
                         .build()));
-                int start = BATCH_SIZE;
+                int start = batchSize;
                 int nextWindow = start * start;
                 int end = Math.min(nextWindow, mainTask.getTo());
                 list.add(calcSet(start, end));
@@ -75,9 +80,9 @@ public class FastCalculator implements Calculator {
             while (st < end) {
                 taskSet.add(Task.builder()
                         .from(st)
-                        .to(Math.min(end, st + BATCH_SIZE))
+                        .to(Math.min(end, st + batchSize))
                         .build());
-                st += BATCH_SIZE;
+                st += batchSize;
             }
             return taskSet;
         }

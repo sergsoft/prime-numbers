@@ -7,6 +7,7 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IExecutorService;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import ru.sergsw.test.prime.numbers.calculators.Calculator;
 import ru.sergsw.test.prime.numbers.calculators.LocalContext;
 import ru.sergsw.test.prime.numbers.calculators.Task;
@@ -36,13 +37,16 @@ public class ApplicationHazlecast implements Application {
     }
 
     @Override
-    public void execute(Task task, Statistic statistic) {
+    public void execute(Task task, Statistic statistic, TestScenario testScenario) {
         IExecutorService executor = hzInstance.getExecutorService("calculator");
         HazelcastContext.HAZELCAST_INSTANCE.set(hzInstance);
         log.info("---------------------------------------------Hazelcast processing------------------------------------------------------");
         Set<Member> members = hzInstance.getCluster().getMembers();
         log.info("Nodes: {}", members.size());
-        log.info("Node details: {}", members.stream().map(Member::getAddress).map(Objects::toString).collect(Collectors.joining(", ")));
+        log.info("Node details: {}", members.stream()
+                .map(Member::getAddress)
+                .map(Objects::toString)
+                .collect(Collectors.joining(", ")));
         try {
             for (Calculator calculator : calculatorList) {
                 log.info("===================={}===================", calculator.name());
@@ -53,55 +57,71 @@ public class ApplicationHazlecast implements Application {
                 }
                 log.info("Start calculate");
 
-                SortedSet<Integer> cache = new TreeSet<>();
-                LocalContext localContext = new LocalContext();
-                localContext.warmup(calculator.getBlockSize());
-                cache.addAll(localContext.getSimpleNums());
-
-                Stopwatch stopwatch = Stopwatch.createStarted();
-                try {
-                    int ret = 0;
-                    List<Set<Task>> taskSchedule = spliterator.getSchedule();
-                    for (Set<Task> tasks : taskSchedule) {
-                        List<Future<Output>> futureList = new ArrayList<>();
-
-                        for (List<Task> taskList : Iterables.partition(tasks, TASK_SIZE)) {
-                            Input input = Input.builder()
-                                    .calculator(calculator.getClass())
-                                    .tasks(new ArrayList<>(taskList))
-                                    .cache(cache)
-                                    .build();
-                            futureList.add(executor.submit(new HazlecastCalculator(input)));
-                        }
-
-                        ret += futureList.stream()
-                                .mapToInt(outputFuture -> {
-                                    try {
-                                        Output output = outputFuture.get();
-                                        cache.addAll(output.getResultBlock());
-                                        return output.getResult();
-                                    } catch (InterruptedException | ExecutionException e) {
-                                        log.error("Error", e);
-                                        throw new RuntimeException(e);
-                                    }
-                                }).sum();
-                    }
-                    Duration elapsed = stopwatch.elapsed();
-                    statistic.add(Statistic.Record.builder()
-                            .calculatorName(calculator.name())
-                            .executor("Hazlecast")
-                            .execTime(elapsed)
-                            .result(ret)
-                            .contextSize(cache.size())
-                            .taskSize(task.getTo())
-                            .build());
-                    log.info("Result: {}", ret);
-                } finally {
-                    log.info("Processed in {}", stopwatch.toString());
-                }
+                configureAndRun(testScenario, calculator, blockSize ->
+                        runTest(blockSize, task, statistic, executor, calculator, spliterator));
             }
         } catch (Throwable t) {
             log.error("Error", t);
+        }
+    }
+
+    @Override
+    public Logger getLog() {
+        return log;
+    }
+
+    private void runTest(Integer blockSize,
+                         Task task,
+                         Statistic statistic,
+                         IExecutorService executor,
+                         Calculator calculator,
+                         TaskSpliterator spliterator) {
+        SortedSet<Integer> cache = new TreeSet<>();
+        LocalContext localContext = new LocalContext();
+        localContext.warmup(calculator.getBlockSize());
+        cache.addAll(localContext.getSimpleNums());
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        try {
+            int ret = 0;
+            List<Set<Task>> taskSchedule = spliterator.getSchedule();
+            for (Set<Task> tasks : taskSchedule) {
+                List<Future<Output>> futureList = new ArrayList<>();
+
+                for (List<Task> taskList : Iterables.partition(tasks, TASK_SIZE)) {
+                    Input input = Input.builder()
+                            .calculator(calculator.getClass())
+                            .tasks(new ArrayList<>(taskList))
+                            .cache(cache)
+                            .build();
+                    futureList.add(executor.submit(new HazlecastCalculator(input)));
+                }
+
+                ret += futureList.stream()
+                        .mapToInt(outputFuture -> {
+                            try {
+                                Output output = outputFuture.get();
+                                cache.addAll(output.getResultBlock());
+                                return output.getResult();
+                            } catch (InterruptedException | ExecutionException e) {
+                                log.error("Error", e);
+                                throw new RuntimeException(e);
+                            }
+                        }).sum();
+            }
+            Duration elapsed = stopwatch.elapsed();
+            statistic.add(Statistic.Record.builder()
+                    .calculatorName(calculator.name())
+                    .executor("Hazlecast")
+                    .execTime(elapsed)
+                    .result(ret)
+                    .contextSize(cache.size())
+                    .taskSize(task.getTo())
+                    .blockSize(blockSize)
+                    .build());
+            log.info("Result: {}", ret);
+        } finally {
+            log.info("Processed in {}", stopwatch.toString());
         }
     }
 }

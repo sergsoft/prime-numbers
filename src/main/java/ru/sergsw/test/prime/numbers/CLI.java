@@ -48,11 +48,12 @@ public class CLI {
 
                 log.info("Task: {}", mainTask);
 
-                executors.forEach(application -> application.execute(mainTask, statistic));
+                executors.forEach(application -> application.execute(mainTask, statistic, testScenario));
             }
 
             String csvFile = "stat.csv";
             statistic.writeToCsv(csvFile);
+            log.info(statistic.getSummary());
             log.info("Save result into: {}", csvFile);
         } finally {
             HazelcastContext.shutdown();
