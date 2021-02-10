@@ -5,7 +5,8 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import ru.sergsw.test.prime.numbers.calculators.Calculator;
-import ru.sergsw.test.prime.numbers.calculators.LocalContext;
+import ru.sergsw.test.prime.numbers.calculators.Context;
+import ru.sergsw.test.prime.numbers.calculators.SharedContext;
 import ru.sergsw.test.prime.numbers.calculators.Task;
 import ru.sergsw.test.prime.numbers.calculators.splitterators.TaskSpliterator;
 
@@ -38,7 +39,7 @@ public class ApplicationMultiThread implements Application {
                 }
                 ApplicationMultiThread.log.info("Start calculate");
                 configureAndRun(testScenario, calculator, blockSize ->
-                        runTest(blockSize, task, statistic, executor, calculator, spliterator));
+                        runTest(blockSize, task, statistic, executor, calculator));
             }
         } finally {
             executor.shutdown();
@@ -54,13 +55,14 @@ public class ApplicationMultiThread implements Application {
                          Task task,
                          Statistic statistic,
                          ExecutorService executor,
-                         Calculator calculator,
-                         TaskSpliterator spliterator)
+                         Calculator calculator)
             throws InterruptedException {
+
+        TaskSpliterator spliterator = calculator.spliterator(task);
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
             int ret = 0;
-            LocalContext context = new LocalContext();
+            Context context = new SharedContext();
             context.warmup(calculator.getBlockSize());
             List<Set<Task>> taskSchedule = spliterator.getSchedule();
             for (Set<Task> tasks : taskSchedule) {

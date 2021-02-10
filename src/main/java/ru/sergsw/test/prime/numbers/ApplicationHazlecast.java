@@ -12,10 +12,7 @@ import ru.sergsw.test.prime.numbers.calculators.Calculator;
 import ru.sergsw.test.prime.numbers.calculators.LocalContext;
 import ru.sergsw.test.prime.numbers.calculators.Task;
 import ru.sergsw.test.prime.numbers.calculators.splitterators.TaskSpliterator;
-import ru.sergsw.test.prime.numbers.hazlecast.HazelcastContext;
-import ru.sergsw.test.prime.numbers.hazlecast.HazlecastCalculator;
-import ru.sergsw.test.prime.numbers.hazlecast.Input;
-import ru.sergsw.test.prime.numbers.hazlecast.Output;
+import ru.sergsw.test.prime.numbers.hazlecast.*;
 
 import javax.inject.Inject;
 import java.time.Duration;
@@ -58,7 +55,7 @@ public class ApplicationHazlecast implements Application {
                 log.info("Start calculate");
 
                 configureAndRun(testScenario, calculator, blockSize ->
-                        runTest(blockSize, task, statistic, executor, calculator, spliterator));
+                        runTest(blockSize, task, statistic, executor, calculator));
             }
         } catch (Throwable t) {
             log.error("Error", t);
@@ -74,12 +71,18 @@ public class ApplicationHazlecast implements Application {
                          Task task,
                          Statistic statistic,
                          IExecutorService executor,
-                         Calculator calculator,
-                         TaskSpliterator spliterator) {
-        SortedSet<Integer> cache = new TreeSet<>();
+                         Calculator calculator) {
+        TaskSpliterator spliterator = calculator.spliterator(task);
         LocalContext localContext = new LocalContext();
         localContext.warmup(calculator.getBlockSize());
-        cache.addAll(localContext.getSimpleNums());
+        executor.submitToAllMembers(new HazlecastResetCache(localContext.getSimpleNums()))
+                .forEach((member, voidFuture) -> {
+                    try {
+                        voidFuture.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        log.error("Error on cache reset", e);
+                    }
+                });
 
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
@@ -92,22 +95,30 @@ public class ApplicationHazlecast implements Application {
                     Input input = Input.builder()
                             .calculator(calculator.getClass())
                             .tasks(new ArrayList<>(taskList))
-                            .cache(cache)
                             .build();
                     futureList.add(executor.submit(new HazlecastCalculator(input)));
                 }
 
+                List<Future<Void>> allSync = new ArrayList<>();
                 ret += futureList.stream()
                         .mapToInt(outputFuture -> {
                             try {
                                 Output output = outputFuture.get();
-                                cache.addAll(output.getResultBlock());
+                                allSync.addAll(executor.submitToAllMembers(new HazlecastSyncCache(output.getResultBlock()))
+                                        .values());
                                 return output.getResult();
                             } catch (InterruptedException | ExecutionException e) {
                                 log.error("Error", e);
                                 throw new RuntimeException(e);
                             }
                         }).sum();
+                allSync.forEach(voidFuture -> {
+                    try {
+                        voidFuture.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        log.error("Error on cache sync", e);
+                    }
+                });
             }
             Duration elapsed = stopwatch.elapsed();
             statistic.add(Statistic.Record.builder()
@@ -115,7 +126,7 @@ public class ApplicationHazlecast implements Application {
                     .executor("Hazlecast")
                     .execTime(elapsed)
                     .result(ret)
-                    .contextSize(cache.size())
+                    .contextSize(HazelcastContext.SHARED_CONTEXT.get().calcSize())
                     .taskSize(task.getTo())
                     .blockSize(blockSize)
                     .build());

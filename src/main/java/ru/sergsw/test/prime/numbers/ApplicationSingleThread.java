@@ -20,8 +20,8 @@ public class ApplicationSingleThread implements Application {
     public void execute(Task task, Statistic statistic, TestScenario testScenario) {
         log.info("---------------------------------------------Single thread processing------------------------------------------------------");
         for (Calculator calculator : calculatorList) {
-            ApplicationSingleThread.log.info("===================={}===================", calculator.name());
-            ApplicationSingleThread.log.info("Start calculate");
+            log.info("===================={}===================", calculator.name());
+            log.info("Start calculate");
             try {
                 configureAndRun(testScenario, calculator, blockSize -> runTest(blockSize, task, statistic, calculator));
             } catch (Exception e) {
@@ -43,7 +43,7 @@ public class ApplicationSingleThread implements Application {
             int calc = calculator.calc(task, context);
 
             Duration elapsed = stopwatch.elapsed();
-            ApplicationSingleThread.log.info("Result: {}", calc);
+            log.info("Result: {}", calc);
             statistic.add(Statistic.Record.builder()
                     .calculatorName(calculator.name())
                     .executor("SingleThread")
@@ -54,7 +54,7 @@ public class ApplicationSingleThread implements Application {
                     .blockSize(blockSize)
                     .build());
         } finally {
-            ApplicationSingleThread.log.info("Processed in {}", stopwatch.toString());
+            log.info("Processed in {}", stopwatch.toString());
         }
     }
 }

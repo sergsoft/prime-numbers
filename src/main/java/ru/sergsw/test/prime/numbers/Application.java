@@ -19,6 +19,9 @@ public interface Application {
         } else {
             testRunner.runTest(null);
         }
+        Runtime runtime = Runtime.getRuntime();
+        runtime.gc();
+        getLog().info("Free memory: " + runtime.freeMemory());
     }
 
     Logger getLog();

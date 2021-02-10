@@ -42,20 +42,25 @@ public class Statistic {
                 .collect(Collectors.groupingBy(Record::getTaskSize, Collectors.toList()));
 
         sb.append("-------------------------------Execution summary----------------------------------").append(LINE_SEPARATOR);
-        mapBySize.forEach((maxSize, records) -> getSummary(maxSize, records, sb));
+        mapBySize
+                .entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach((e) -> getSummary(e.getKey(), e.getValue(), sb));
 
         return sb.toString();
     }
 
     private void getSummary(Integer maxSize, List<Record> records, StringBuilder sb) {
-        long minExec = records.stream().map(Record::getExecTime).mapToLong(Duration::toNanos).min().getAsLong();
+        long minExec = records.stream()
+                .map(Record::getExecTime)
+                .mapToLong(Duration::toNanos)
+                .min()
+                .getAsLong();
         records.stream()
                 .filter(record -> record.getExecTime().toNanos() == minExec)
                 .forEach(record -> {
-                    sb
-                            .append(record.getTaskSize()).append(" | ").append(record.getExecutor()).append("-").append(record.getCalculatorName())
-                            .append("[").append(record.getBlockSize()).append("]")
-                            .append(formatDuration(record.getExecTime()))
+                    sb.append("MaxNum = ").append(maxSize).append(" - ")
+                            .append(record.toString())
                             .append(LINE_SEPARATOR);
                 });
         boolean wrongRes = records.stream().mapToInt(Record::getResult).distinct().count() > 1;

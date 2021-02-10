@@ -1,19 +1,19 @@
-package ru.sergsw.test.prime.numbers.hazlecast;
+package ru.sergsw.test.prime.numbers.calculators;
 
 import lombok.Getter;
-import ru.sergsw.test.prime.numbers.calculators.Context;
 
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class SharedContext implements Context {
-    private final SortedSet<Integer> sharedContext;
+    private final SortedSet<Integer> sharedContext = new ConcurrentSkipListSet<>();
     @Getter
     private final Set<Integer> blockArray = new ConcurrentSkipListSet<>();
 
-    public SharedContext(SortedSet<Integer> sharedContext) {
-        this.sharedContext = sharedContext;
+    public void reset() {
+        blockArray.clear();
+        sharedContext.clear();
     }
 
     @Override

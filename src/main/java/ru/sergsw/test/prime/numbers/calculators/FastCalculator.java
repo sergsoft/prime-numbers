@@ -61,17 +61,21 @@ public class FastCalculator implements Calculator, ConfigurableCalculator {
                         .to(batchSize)
                         .build()));
                 int start = batchSize;
-                int nextWindow = start * start;
+                int nextWindow = limitByInt( (long)start * start);
                 int end = Math.min(nextWindow, mainTask.getTo());
                 list.add(calcSet(start, end));
                 while (mainTask.getTo() > nextWindow) {
                     start = nextWindow;
-                    nextWindow = start * start;
+                    nextWindow = limitByInt((long)start * start);
                     end = Math.min(nextWindow, mainTask.getTo());
                     list.add(calcSet(start, end));
                 }
             }
             schedule = list;
+        }
+
+        private int limitByInt(long l) {
+            return (int) Math.min(Integer.MAX_VALUE, l);
         }
 
         private Set<Task> calcSet(int start, int end) {

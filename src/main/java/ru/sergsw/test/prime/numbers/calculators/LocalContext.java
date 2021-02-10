@@ -3,11 +3,11 @@ package ru.sergsw.test.prime.numbers.calculators;
 import lombok.Value;
 
 import java.util.SortedSet;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.TreeSet;
 
 @Value
 public class LocalContext implements Context {
-   SortedSet<Integer> simpleNums = new ConcurrentSkipListSet<>();
+   SortedSet<Integer> simpleNums = new TreeSet<>();
 
    @Override
    public long calcSize() {

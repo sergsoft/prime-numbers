@@ -7,6 +7,7 @@ public class PlainCalculator implements Calculator {
         int from = task.getFrom() % 2 == 1 ? task.getFrom() : task.getFrom() + 1;
         for (int i = from; i < task.getTo(); i+=2) {
             if (checkNum(i)) {
+                context.addValue(i);
                 ret++;
             }
         }

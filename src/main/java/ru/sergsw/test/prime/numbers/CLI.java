@@ -19,6 +19,7 @@ public class CLI {
             .maxValue(1_000_000)
             .maxValue(5_000_000)
             .maxValue(10_000_000)
+            .maxValue(50_000_000)
             .executors(EnumSet.of(TestExecutors.MULTI_THREAD, TestExecutors.SINGLE_THREAD, TestExecutors.HAZLECAST))
             .blockSize(10)
             .blockSize(100)

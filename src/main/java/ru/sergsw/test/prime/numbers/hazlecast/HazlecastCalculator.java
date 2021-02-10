@@ -2,6 +2,7 @@ package ru.sergsw.test.prime.numbers.hazlecast;
 
 import lombok.extern.slf4j.Slf4j;
 import ru.sergsw.test.prime.numbers.calculators.Calculator;
+import ru.sergsw.test.prime.numbers.calculators.SharedContext;
 
 import java.io.Serializable;
 import java.util.List;
@@ -24,7 +25,7 @@ public class HazlecastCalculator implements Callable<Output>, Serializable {
     public Output call() throws Exception {
         ExecutorService executor = HazelcastContext.getExecutor();
         Calculator calculator = (Calculator) HazelcastContext.GUICE_INJECTOR.get().getInstance(input.getCalculator());
-        SharedContext context = new SharedContext(input.getCache());
+        SharedContext context = HazelcastContext.SHARED_CONTEXT.get();
 
         Set<Callable<Integer>> set = input.getTasks().stream()
                 .map(task -> (Callable<Integer>) () -> calculator.calc(task, context))
