@@ -1,20 +1,20 @@
 package ru.sergsw.test.prime.numbers;
 
-import lombok.Builder;
-import lombok.Singular;
-import lombok.Value;
+import lombok.*;
 
 import java.util.List;
 import java.util.Set;
 
-@Value
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TestScenario {
     @Singular
-    List<Integer> maxValues;
+    private List<Integer> maxValues;
 
     @Singular
-    List<Integer> blockSizes;
+    private List<Integer> blockSizes;
 
-    Set<TestExecutors> executors;
+    private Set<TestExecutors> executors;
 }

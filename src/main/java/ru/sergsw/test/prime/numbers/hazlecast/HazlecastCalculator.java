@@ -23,9 +23,9 @@ public class HazlecastCalculator implements Callable<Output>, Serializable {
 
     @Override
     public Output call() throws Exception {
-        ExecutorService executor = HazelcastContext.getExecutor();
-        Calculator calculator = (Calculator) HazelcastContext.GUICE_INJECTOR.get().getInstance(input.getCalculator());
-        SharedContext context = HazelcastContext.SHARED_CONTEXT.get();
+        ExecutorService executor = HazelcastGlobalContext.getExecutor();
+        Calculator calculator = (Calculator) HazelcastGlobalContext.GUICE_INJECTOR.get().getInstance(input.getCalculator());
+        SharedContext context = HazelcastGlobalContext.SHARED_CONTEXT.get();
 
         Set<Callable<Integer>> set = input.getTasks().stream()
                 .map(task -> (Callable<Integer>) () -> calculator.calc(task, context))
@@ -42,9 +42,10 @@ public class HazlecastCalculator implements Callable<Output>, Serializable {
                     }
                 })
                 .sum();
+        log.debug("calculated block: {}", ret);
         return Output.builder()
                 .result(ret)
-                .resultBlock(context.getBlockArray())
+                .resultBlock(context.getBlockArray().stream().mapToInt(Integer::intValue).toArray())
                 .build();
     }
 }

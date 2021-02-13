@@ -22,7 +22,12 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class ApplicationHazlecast implements Application {
+public class ApplicationHazlecast extends AbstractApplication {
+    @Override
+    protected String getExecutorName() {
+        return "Hazlecast";
+    }
+
     private static final int TASK_SIZE = 8;
     @Inject
     private Set<Calculator> calculatorList;
@@ -36,7 +41,7 @@ public class ApplicationHazlecast implements Application {
     @Override
     public void execute(Task task, Statistic statistic, TestScenario testScenario) {
         IExecutorService executor = hzInstance.getExecutorService("calculator");
-        HazelcastContext.HAZELCAST_INSTANCE.set(hzInstance);
+        HazelcastGlobalContext.HAZELCAST_INSTANCE.set(hzInstance);
         log.info("---------------------------------------------Hazelcast processing------------------------------------------------------");
         Set<Member> members = hzInstance.getCluster().getMembers();
         log.info("Nodes: {}", members.size());
@@ -55,7 +60,7 @@ public class ApplicationHazlecast implements Application {
                 log.info("Start calculate");
 
                 configureAndRun(testScenario, calculator, blockSize ->
-                        runTest(blockSize, task, statistic, executor, calculator));
+                        runTest(task, executor, calculator), statistic);
             }
         } catch (Throwable t) {
             log.error("Error", t);
@@ -63,13 +68,11 @@ public class ApplicationHazlecast implements Application {
     }
 
     @Override
-    public Logger getLog() {
+    protected Logger getLog() {
         return log;
     }
 
-    private void runTest(Integer blockSize,
-                         Task task,
-                         Statistic statistic,
+    private TestResult runTest(Task task,
                          IExecutorService executor,
                          Calculator calculator) {
         TaskSpliterator spliterator = calculator.spliterator(task);
@@ -99,19 +102,20 @@ public class ApplicationHazlecast implements Application {
                     futureList.add(executor.submit(new HazlecastCalculator(input)));
                 }
 
-                List<Future<Void>> allSync = new ArrayList<>();
+                List<int[]> diff = new ArrayList<>();
                 ret += futureList.stream()
                         .mapToInt(outputFuture -> {
                             try {
                                 Output output = outputFuture.get();
-                                allSync.addAll(executor.submitToAllMembers(new HazlecastSyncCache(output.getResultBlock()))
-                                        .values());
+                                diff.add(output.getResultBlock());
                                 return output.getResult();
                             } catch (InterruptedException | ExecutionException e) {
                                 log.error("Error", e);
                                 throw new RuntimeException(e);
                             }
                         }).sum();
+
+                Collection<Future<Void>> allSync = executor.submitToAllMembers(new HazlecastSyncCache(diff)).values();
                 allSync.forEach(voidFuture -> {
                     try {
                         voidFuture.get();
@@ -121,16 +125,12 @@ public class ApplicationHazlecast implements Application {
                 });
             }
             Duration elapsed = stopwatch.elapsed();
-            statistic.add(Statistic.Record.builder()
-                    .calculatorName(calculator.name())
-                    .executor("Hazlecast")
-                    .execTime(elapsed)
-                    .result(ret)
-                    .contextSize(HazelcastContext.SHARED_CONTEXT.get().calcSize())
-                    .taskSize(task.getTo())
-                    .blockSize(blockSize)
-                    .build());
             log.info("Result: {}", ret);
+            return TestResult.builder()
+                    .duration(elapsed)
+                    .result(ret)
+                    .taskSize(task.getTo())
+                    .build();
         } finally {
             log.info("Processed in {}", stopwatch.toString());
         }

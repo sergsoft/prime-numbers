@@ -18,7 +18,12 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class ApplicationMultiThread implements Application {
+public class ApplicationMultiThread extends AbstractApplication {
+    @Override
+    protected String getExecutorName() {
+        return "MultiThread";
+    }
+
     @Inject
     private Set<Calculator> calculatorList;
 
@@ -39,7 +44,7 @@ public class ApplicationMultiThread implements Application {
                 }
                 ApplicationMultiThread.log.info("Start calculate");
                 configureAndRun(testScenario, calculator, blockSize ->
-                        runTest(blockSize, task, statistic, executor, calculator));
+                        runTest(task, executor, calculator), statistic);
             }
         } finally {
             executor.shutdown();
@@ -51,9 +56,7 @@ public class ApplicationMultiThread implements Application {
         return log;
     }
 
-    private void runTest(Integer blockSize,
-                         Task task,
-                         Statistic statistic,
+    private TestResult runTest(Task task,
                          ExecutorService executor,
                          Calculator calculator)
             throws InterruptedException {
@@ -82,16 +85,12 @@ public class ApplicationMultiThread implements Application {
                 context.flush();
             }
             Duration elapsed = stopwatch.elapsed();
-            statistic.add(Statistic.Record.builder()
-                    .calculatorName(calculator.name())
-                    .executor("MultiThread")
-                    .execTime(elapsed)
-                    .result(ret)
-                    .contextSize(context.calcSize())
-                    .taskSize(task.getTo())
-                    .blockSize(blockSize)
-                    .build());
             ApplicationMultiThread.log.info("Result: {}", ret);
+            return TestResult.builder()
+                    .duration(elapsed)
+                    .result(ret)
+                    .taskSize(task.getTo())
+                    .build();
         } finally {
             ApplicationMultiThread.log.info("Processed in {}", stopwatch.toString());
         }

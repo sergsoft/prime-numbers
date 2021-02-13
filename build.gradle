@@ -11,20 +11,31 @@ repositories {
     mavenCentral()
 }
 
+sourceCompatibility = JavaVersion.VERSION_11
+
 application {
     mainClass = 'ru.sergsw.test.prime.numbers.CLI'
 }
 
 dependencies {
     implementation 'com.google.inject:guice:4.2.3'
-    compile group: 'com.google.inject.extensions', name: 'guice-multibindings', version: '4.2.3'
+    implementation group: 'com.google.inject.extensions', name: 'guice-multibindings', version: '4.2.3'
     implementation 'com.google.guava:guava:30.1-jre'
     implementation 'org.slf4j:slf4j-simple:1.6.1'
     implementation 'com.hazelcast:hazelcast-all:4.1.1'
     implementation 'commons-lang:commons-lang:2.6'
+    implementation 'commons-cli:commons-cli:1.4'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.6.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+distZip {
+    into(project.name) {
+        from '.'
+        include 'test_case.json'
+    }
 }
 
 test {

@@ -1,0 +1,15 @@
+{
+  "maxValues": [
+    100000,
+    500000,
+    1000000
+  ],
+  "blockSizes": [
+    1000
+  ],
+  "executors": [
+    "SINGLE_THREAD",
+    "MULTI_THREAD",
+    "HAZLECAST"
+  ]
+}

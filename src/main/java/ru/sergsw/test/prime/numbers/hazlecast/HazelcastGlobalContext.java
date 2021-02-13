@@ -10,7 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
-public class HazelcastContext {
+public class HazelcastGlobalContext {
     public static final AtomicReference<Injector> GUICE_INJECTOR = new AtomicReference<>();
     public static final AtomicReference<ExecutorService> EXECUTOR = new AtomicReference<>();
     public static final AtomicReference<HazelcastInstance> HAZELCAST_INSTANCE = new AtomicReference<>();
@@ -23,7 +23,6 @@ public class HazelcastContext {
         }
         HazelcastInstance hazelcastInstance = HAZELCAST_INSTANCE.get();
         if (hazelcastInstance != null) {
-            hazelcastInstance.getCluster().shutdown();
             hazelcastInstance.shutdown();
         }
     }

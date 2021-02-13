@@ -12,7 +12,12 @@ import java.time.Duration;
 import java.util.Set;
 
 @Slf4j
-public class ApplicationSingleThread implements Application {
+public class ApplicationSingleThread extends AbstractApplication {
+    @Override
+    protected String getExecutorName() {
+        return "SingleThread";
+    }
+
     @Inject
     private Set<Calculator> calculatorList;
 
@@ -23,7 +28,7 @@ public class ApplicationSingleThread implements Application {
             log.info("===================={}===================", calculator.name());
             log.info("Start calculate");
             try {
-                configureAndRun(testScenario, calculator, blockSize -> runTest(blockSize, task, statistic, calculator));
+                configureAndRun(testScenario, calculator, blockSize -> runTest(task, calculator), statistic);
             } catch (Exception e) {
                 log.error("Error on execution", e);
             }
@@ -35,7 +40,7 @@ public class ApplicationSingleThread implements Application {
         return log;
     }
 
-    private void runTest(Integer blockSize, Task task, Statistic statistic, Calculator calculator) {
+    private TestResult runTest(Task task, Calculator calculator) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
             LocalContext context = new LocalContext();
@@ -44,15 +49,11 @@ public class ApplicationSingleThread implements Application {
 
             Duration elapsed = stopwatch.elapsed();
             log.info("Result: {}", calc);
-            statistic.add(Statistic.Record.builder()
-                    .calculatorName(calculator.name())
-                    .executor("SingleThread")
-                    .execTime(elapsed)
+            return TestResult.builder()
+                    .duration(elapsed)
                     .result(calc)
-                    .contextSize(context.calcSize())
                     .taskSize(task.getTo())
-                    .blockSize(blockSize)
-                    .build());
+                    .build();
         } finally {
             log.info("Processed in {}", stopwatch.toString());
         }

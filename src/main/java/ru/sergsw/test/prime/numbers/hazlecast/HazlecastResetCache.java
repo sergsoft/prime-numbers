@@ -1,6 +1,6 @@
 package ru.sergsw.test.prime.numbers.hazlecast;
 
-import ru.sergsw.test.prime.numbers.calculators.SharedContext;
+import ru.sergsw.test.prime.numbers.calculators.Context;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -15,7 +15,7 @@ public class HazlecastResetCache implements Callable<Void>, Serializable {
 
     @Override
     public Void call() throws Exception {
-        SharedContext sharedContext = HazelcastContext.SHARED_CONTEXT.get();
+        Context sharedContext = HazelcastGlobalContext.SHARED_CONTEXT.get();
         sharedContext.reset();
         sharedContext.getSimpleNums().addAll(cacheInit);
         return null;

@@ -20,4 +20,8 @@ public interface Context {
     void addValue(int val);
 
     void flush();
+
+    default void reset() {
+
+    }
 }
