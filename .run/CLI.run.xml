@@ -2,7 +2,7 @@
   <configuration default="false" name="CLI" type="Application" factoryName="Application" nameIsGenerated="true">
     <option name="MAIN_CLASS_NAME" value="ru.sergsw.test.prime.numbers.CLI" />
     <module name="prime-numbers.main" />
-    <option name="PROGRAM_PARAMETERS" value="-t 10 -tc test_case_hazlecast_only.json" />
+    <option name="PROGRAM_PARAMETERS" value="-t 10 -tc test_case_hazlecast_part_only.json" />
     <option name="VM_PARAMETERS" value="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=mem.bin -Xmx1500m" />
     <extension name="coverage">
       <pattern>

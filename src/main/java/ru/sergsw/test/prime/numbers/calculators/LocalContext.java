@@ -1,13 +1,13 @@
 package ru.sergsw.test.prime.numbers.calculators;
 
-import lombok.Value;
+import lombok.Getter;
 
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-@Value
 public class LocalContext implements Context {
-   SortedSet<Integer> simpleNums = new TreeSet<>();
+   @Getter
+   private final SortedSet<Integer> simpleNums = new TreeSet<>();
 
    @Override
    public long calcSize() {

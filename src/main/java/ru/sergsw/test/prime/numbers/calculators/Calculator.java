@@ -17,4 +17,8 @@ public interface Calculator {
     default int getBlockSize() {
         return -1;
     }
+
+    default boolean useContext() {
+        return false;
+    }
 }

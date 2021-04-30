@@ -1,8 +1,10 @@
-package ru.sergsw.test.prime.numbers.hazlecast;
+package ru.sergsw.test.prime.numbers.hazlecast.partition;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ru.sergsw.test.prime.numbers.calculators.Calculator;
-import ru.sergsw.test.prime.numbers.calculators.SharedContext;
+import ru.sergsw.test.prime.numbers.hazlecast.HazelcastGlobalContext;
+import ru.sergsw.test.prime.numbers.hazlecast.Input;
 
 import java.io.Serializable;
 import java.util.List;
@@ -14,21 +16,17 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class HazlecastCalculator implements Callable<Output>, Serializable {
+@RequiredArgsConstructor
+public class SpecialFastCalculatorTask implements Callable<Integer>, Serializable {
     private final Input input;
 
-    public HazlecastCalculator(Input input) {
-        this.input = input;
-    }
-
     @Override
-    public Output call() throws Exception {
+    public Integer call() throws Exception {
         ExecutorService executor = HazelcastGlobalContext.getExecutor();
-        Calculator calculator = (Calculator) HazelcastGlobalContext.GUICE_INJECTOR.get().getInstance(input.getCalculator());
-        SharedContext context = HazelcastGlobalContext.SHARED_CONTEXT.get();
+        Calculator calculator = SpecialFastCalculator.CALCULATOR;
 
         Set<Callable<Integer>> set = input.getTasks().stream()
-                .map(task -> (Callable<Integer>) () -> calculator.calc(task, context))
+                .map(task -> (Callable<Integer>) () -> calculator.calc(task, null))
                 .collect(Collectors.toSet());
         List<Future<Integer>> futureList = executor.invokeAll(set);
 
@@ -43,9 +41,6 @@ public class HazlecastCalculator implements Callable<Output>, Serializable {
                 })
                 .sum();
         log.debug("calculated block: {}", ret);
-        return Output.builder()
-                .result(ret)
-                .resultBlock(context.getBlockArray().stream().mapToInt(Integer::intValue).toArray())
-                .build();
+        return ret;
     }
 }

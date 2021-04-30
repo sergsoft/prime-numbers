@@ -3,7 +3,6 @@ package ru.sergsw.test.prime.numbers;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import com.hazelcast.cluster.Member;
-import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IExecutorService;
 import lombok.extern.slf4j.Slf4j;
@@ -13,35 +12,37 @@ import ru.sergsw.test.prime.numbers.calculators.LocalContext;
 import ru.sergsw.test.prime.numbers.calculators.Task;
 import ru.sergsw.test.prime.numbers.calculators.splitterators.TaskSpliterator;
 import ru.sergsw.test.prime.numbers.hazlecast.*;
+import ru.sergsw.test.prime.numbers.hazlecast.fast.HazlecastCalculator;
+import ru.sergsw.test.prime.numbers.hazlecast.fast.HazlecastResetCache;
+import ru.sergsw.test.prime.numbers.hazlecast.fast.HazlecastSyncCache;
+import ru.sergsw.test.prime.numbers.hazlecast.fast.Output;
 
-import javax.inject.Inject;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-@Slf4j
-public class ApplicationHazlecast extends AbstractApplication {
-    @Override
-    protected String getExecutorName() {
-        return "Hazlecast";
-    }
+import static ru.sergsw.test.prime.numbers.hazlecast.HazelcastGlobalContext.TASK_SIZE_DEF;
 
-    private static final int TASK_SIZE = 8;
-    @Inject
-    private Set<Calculator> calculatorList;
+@Slf4j
+public class ApplicationHazlecastFast extends AbstractApplication {
+    private static final int TASK_SIZE = TASK_SIZE_DEF;
 
     private final HazelcastInstance hzInstance;
 
-    public ApplicationHazlecast() {
-        hzInstance = Hazelcast.newHazelcastInstance();
+    public ApplicationHazlecastFast() {
+        hzInstance = HazelcastGlobalContext.getHazelcastInstance();
     }
 
     @Override
-    public void execute(Task task, Statistic statistic, TestScenario testScenario) {
+    protected String getExecutorName() {
+        return "Hazlecast-Fast";
+    }
+
+    @Override
+    public void execute(Task task, Statistic statistic, TestScenario testScenario, List<? extends Calculator> calculatorList) {
         IExecutorService executor = hzInstance.getExecutorService("calculator");
-        HazelcastGlobalContext.HAZELCAST_INSTANCE.set(hzInstance);
         log.info("---------------------------------------------Hazelcast processing------------------------------------------------------");
         Set<Member> members = hzInstance.getCluster().getMembers();
         log.info("Nodes: {}", members.size());
@@ -76,16 +77,19 @@ public class ApplicationHazlecast extends AbstractApplication {
                          IExecutorService executor,
                          Calculator calculator) {
         TaskSpliterator spliterator = calculator.spliterator(task);
-        LocalContext localContext = new LocalContext();
-        localContext.warmup(calculator.getBlockSize());
-        executor.submitToAllMembers(new HazlecastResetCache(localContext.getSimpleNums()))
-                .forEach((member, voidFuture) -> {
-                    try {
-                        voidFuture.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        log.error("Error on cache reset", e);
-                    }
-                });
+
+        if (calculator.useContext()) {
+            LocalContext localContext = new LocalContext();
+            localContext.warmup(calculator.getBlockSize());
+            executor.submitToAllMembers(new HazlecastResetCache(localContext.getSimpleNums()))
+                    .forEach((member, voidFuture) -> {
+                        try {
+                            voidFuture.get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            log.error("Error on cache reset", e);
+                        }
+                    });
+        }
 
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
@@ -102,12 +106,19 @@ public class ApplicationHazlecast extends AbstractApplication {
                     futureList.add(executor.submit(new HazlecastCalculator(input)));
                 }
 
-                List<int[]> diff = new ArrayList<>();
+                List<int[]> diff;
+                if (calculator.useContext()) {
+                    diff = new ArrayList<>();
+                } else {
+                    diff = null;
+                }
                 ret += futureList.stream()
                         .mapToInt(outputFuture -> {
                             try {
                                 Output output = outputFuture.get();
-                                diff.add(output.getResultBlock());
+                                if (diff != null) {
+                                    diff.add(output.getResultBlock());
+                                }
                                 return output.getResult();
                             } catch (InterruptedException | ExecutionException e) {
                                 log.error("Error", e);
@@ -115,14 +126,16 @@ public class ApplicationHazlecast extends AbstractApplication {
                             }
                         }).sum();
 
-                Collection<Future<Void>> allSync = executor.submitToAllMembers(new HazlecastSyncCache(diff)).values();
-                allSync.forEach(voidFuture -> {
-                    try {
-                        voidFuture.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        log.error("Error on cache sync", e);
-                    }
-                });
+                if (diff != null) {
+                    Collection<Future<Void>> allSync = executor.submitToAllMembers(new HazlecastSyncCache(diff)).values();
+                    allSync.forEach(voidFuture -> {
+                        try {
+                            voidFuture.get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            log.error("Error on cache sync", e);
+                        }
+                    });
+                }
             }
             Duration elapsed = stopwatch.elapsed();
             log.info("Result: {}", ret);

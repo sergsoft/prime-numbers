@@ -1,6 +1,7 @@
 package ru.sergsw.test.prime.numbers;
 
 import lombok.*;
+import ru.sergsw.test.prime.numbers.calculators.Calculators;
 
 import java.util.List;
 import java.util.Set;
@@ -17,4 +18,6 @@ public class TestScenario {
     private List<Integer> blockSizes;
 
     private Set<TestExecutors> executors;
+
+    private Set<Calculators> calculators;
 }

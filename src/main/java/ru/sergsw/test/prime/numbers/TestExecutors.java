@@ -6,7 +6,9 @@ import lombok.Getter;
 public enum TestExecutors {
     SINGLE_THREAD(ApplicationSingleThread.class),
     MULTI_THREAD(ApplicationMultiThread.class),
-    HAZLECAST(ApplicationHazlecast.class);
+    HAZLECAST(ApplicationHazlecastFast.class),
+    HAZLECAST_SIMPLE(ApplicationHazlecastSimple.class),
+    HAZLECAST_PARTITION(ApplicationHazlecastPartition.class);
 
     private final Class<? extends Application> aClass;
 

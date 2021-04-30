@@ -8,7 +8,9 @@ import com.hazelcast.core.HazelcastInstance;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
+import ru.sergsw.test.prime.numbers.calculators.Calculators;
 import ru.sergsw.test.prime.numbers.calculators.Task;
+import ru.sergsw.test.prime.numbers.config.GuiceContextAware;
 import ru.sergsw.test.prime.numbers.config.MainModule;
 import ru.sergsw.test.prime.numbers.hazlecast.HazelcastGlobalContext;
 
@@ -34,6 +36,7 @@ public class CLI {
             .blockSize(1_000)
             .blockSize(10_000)
             .blockSize(100_000)
+            .calculators(EnumSet.of(Calculators.PLAIN, Calculators.FAST))
             .build();
     private static final DateTimeFormatter CSV_TS_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-hhmmss");
 
@@ -122,7 +125,7 @@ public class CLI {
 
     private static void runTests(RunOptions runOptions) {
         Injector injector = Guice.createInjector(new MainModule());
-        HazelcastGlobalContext.GUICE_INJECTOR.set(injector);
+        GuiceContextAware.INJECTOR.set(injector);
         TestScenario testScenario = runOptions.getTestScenario();
 
         List<Application> executors =
@@ -168,7 +171,7 @@ public class CLI {
     @SneakyThrows
     private static void runSlave() {
         Injector injector = Guice.createInjector(new MainModule());
-        HazelcastGlobalContext.GUICE_INJECTOR.set(injector);
+        GuiceContextAware.INJECTOR.set(injector);
         HazelcastInstance hzInstance = Hazelcast.newHazelcastInstance();
         HazelcastGlobalContext.HAZELCAST_INSTANCE.set(hzInstance);
         while (true) {

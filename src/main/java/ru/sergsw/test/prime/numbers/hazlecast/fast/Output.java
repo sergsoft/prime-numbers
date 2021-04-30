@@ -1,4 +1,4 @@
-package ru.sergsw.test.prime.numbers.hazlecast;
+package ru.sergsw.test.prime.numbers.hazlecast.fast;
 
 import lombok.Builder;
 import lombok.Value;

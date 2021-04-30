@@ -10,7 +10,6 @@ import ru.sergsw.test.prime.numbers.calculators.SharedContext;
 import ru.sergsw.test.prime.numbers.calculators.Task;
 import ru.sergsw.test.prime.numbers.calculators.splitterators.TaskSpliterator;
 
-import javax.inject.Inject;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -24,12 +23,9 @@ public class ApplicationMultiThread extends AbstractApplication {
         return "MultiThread";
     }
 
-    @Inject
-    private Set<Calculator> calculatorList;
-
     @SneakyThrows
     @Override
-    public void execute(Task task, Statistic statistic, TestScenario testScenario) {
+    public void execute(Task task, Statistic statistic, TestScenario testScenario, List<? extends Calculator> calculatorList) {
         log.info("---------------------------------------------Multi thread processing------------------------------------------------------");
         int cores = Runtime.getRuntime().availableProcessors();
         log.info("Thread count: {}", cores);
@@ -65,8 +61,13 @@ public class ApplicationMultiThread extends AbstractApplication {
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
             int ret = 0;
-            Context context = new SharedContext();
-            context.warmup(calculator.getBlockSize());
+            Context context;
+            if (calculator.useContext()) {
+                context = new SharedContext();
+                context.warmup(calculator.getBlockSize());
+            } else {
+                context = null;
+            }
             List<Set<Task>> taskSchedule = spliterator.getSchedule();
             for (Set<Task> tasks : taskSchedule) {
                 Set<Callable<Integer>> execTasks = tasks.stream()
@@ -82,7 +83,9 @@ public class ApplicationMultiThread extends AbstractApplication {
                                 throw new RuntimeException(e);
                             }
                         }).sum();
-                context.flush();
+                if (context != null){
+                    context.flush();
+                }
             }
             Duration elapsed = stopwatch.elapsed();
             ApplicationMultiThread.log.info("Result: {}", ret);

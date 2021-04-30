@@ -7,9 +7,8 @@ import ru.sergsw.test.prime.numbers.calculators.Calculator;
 import ru.sergsw.test.prime.numbers.calculators.LocalContext;
 import ru.sergsw.test.prime.numbers.calculators.Task;
 
-import javax.inject.Inject;
 import java.time.Duration;
-import java.util.Set;
+import java.util.List;
 
 @Slf4j
 public class ApplicationSingleThread extends AbstractApplication {
@@ -18,11 +17,8 @@ public class ApplicationSingleThread extends AbstractApplication {
         return "SingleThread";
     }
 
-    @Inject
-    private Set<Calculator> calculatorList;
-
     @Override
-    public void execute(Task task, Statistic statistic, TestScenario testScenario) {
+    public void execute(Task task, Statistic statistic, TestScenario testScenario, List<? extends Calculator> calculatorList) {
         log.info("---------------------------------------------Single thread processing------------------------------------------------------");
         for (Calculator calculator : calculatorList) {
             log.info("===================={}===================", calculator.name());
@@ -43,8 +39,11 @@ public class ApplicationSingleThread extends AbstractApplication {
     private TestResult runTest(Task task, Calculator calculator) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
-            LocalContext context = new LocalContext();
-            context.getSimpleNums().add(2);
+            LocalContext context = null;
+            if (calculator.useContext()) {
+                context = new LocalContext();
+                context.getSimpleNums().add(2);
+            }
             int calc = calculator.calc(task, context);
 
             Duration elapsed = stopwatch.elapsed();

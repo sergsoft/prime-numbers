@@ -171,7 +171,7 @@ public class Statistic {
         }
 
         public static String getCsvHeader(String prefix) {
-            return String.format("%1$sMin;%1$sMax;%1$sRMS,%1$sAvg,%1$sCnt", prefix);
+            return String.format("%1$sMin;%1$sMax;%1$sRMS;%1$sAvg;%1$sCnt", prefix);
         }
 
         @SneakyThrows

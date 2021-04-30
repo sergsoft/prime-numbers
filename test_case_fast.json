@@ -11,5 +11,10 @@
     "SINGLE_THREAD",
     "MULTI_THREAD",
     "HAZLECAST"
+  ],
+  "calculators": [
+    "SLOW",
+    "PLAIN",
+    "FAST"
   ]
 }

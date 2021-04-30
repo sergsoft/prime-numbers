@@ -16,5 +16,9 @@
   "executors": [
     "SINGLE_THREAD",
     "MULTI_THREAD"
+  ],
+  "calculators": [
+    "PLAIN",
+    "FAST"
   ]
 }

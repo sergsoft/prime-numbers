@@ -25,6 +25,11 @@ public class FastCalculator implements Calculator, ConfigurableCalculator {
     }
 
     @Override
+    public boolean useContext() {
+        return true;
+    }
+
+    @Override
     public TaskSpliterator spliterator(Task mainTask) {
         return new FastCalcSpliterator(mainTask);
     }
